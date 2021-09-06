@@ -1,0 +1,63 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "MicroVASM",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#reserved"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.microvasm",
+				"match": "\\b(DEF|EOP|LDR|STR|LDS|STS|LDI|MOV|NEG|INVOKE|ADD|SUB|MUL|DIV|CMP|JMP|CALL|AND|ORR|NOT|LSL|LSR|XOR)\\b"
+			},{
+
+				"name": "entity.name.tag.microvasm",
+				"match": "\\b(FUNCTION)\\b"
+			},{
+
+				"name": "entity.name.class.microvasm",
+				"match": "\\b(SCOPE|END|REFERENCE)\\b"
+			},
+			{
+				"name": "entity.name.function.microvasm",
+				"match": "\\b(R0|R1|R2|R3|R4|RR)\\b"
+			}, 
+			{
+				"name": "constant.numeric.microvasm",
+				"match": "\\b(0x[0-9a-fA-F]+|0o[0-8]+|0b[0-1]+|[0-9]+)\\b"
+			},
+			{
+				"name": "variable.microvasm",
+				"match": "\\b(INT8|INT16|INT32|INT64|FLOAT32|FLOAT64|UINT8|UINT16|UINT32|UINT64)\\b"
+			},
+			{
+				"name": "strong.microvasm",
+				"match": "\\b(EQUAL|NOT_EQUAL|GREATER|LESS|GREATER_OR_EQUAL|LESS_OR_EQUAL)\\b"
+			},
+			{
+			"name": "comment.line.microvasm",
+			"match": ";.*"
+			}]
+		},
+		"strings": {
+			"name": "string.quoted.double.microvasm",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.microvasm",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "main.vasm"
+}

@@ -1,0 +1,79 @@
+FUNCTION print
+
+MOV R1 R2  ; do something
+
+MOV     R2  R2
+
+SCOPE scope ; Simple comment
+    MOV R1 R2
+    INVOKE print
+END
+
+CALL scope
+
+
+CALL scope
+
+EOP
+
+
+MOV R1 R2
+
+CMP EQUAL R0 R2  R1
+
+
+LDS R1 23 INT16
+
+MOV R0 R2
+
+ADD R1  R2  R2
+
+SCOPE something
+    LDI R0 INT8 fgdf
+    ADD R2 R1 R0
+    JMP R0 scope
+END
+
+
+
+; For loop from 0 to 10
+
+SCOPE forLoop
+    DEF     INT64 length    0
+    LDI     R0 INT8 0
+    LDI     R1 INT8 10
+    REFERENCE   for_start
+    CMP     GREATER_OR_EQUAL R2 R0 R1
+    JMP     R2  for_end
+    ; Body
+    LDI     R3 INT8 1
+    ADD     R0 R0 R3
+    JMP     R2 for_start
+    STS     R0 length INT32
+    REFERENCE for_end
+    INVOKE  print
+END
+
+
+
+SCOPE forArray
+    DEF     INT32 i         0
+    DEF     INT32 length    2
+    LDI     R0 INT32        0
+    LDS     R1 4 INT32
+    REFERENCE   for_start
+    CMP    GREATER_OR_EQUAL R2 R0 R1
+    JMP     R2 for_end2
+    ; Body
+    STR     R0 R1 R3
+    STS     R0 0 INT32
+    STS     R0 length INT32
+    STR     R0 R1 R2
+
+    LDS     R0 length INT32
+    ; Body
+    LDI     R3 INT8 1
+    ADD     R0 R0 R3
+    JMP     R2 for_start
+    REFERENCE for_end2
+END
