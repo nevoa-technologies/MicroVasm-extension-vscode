@@ -2,7 +2,9 @@
     "name": "microvasm",
     "displayName": "MicroVASM",
     "description": "Syntax Highlighting for the MicroVASM language.",
-    "version": "0.0.1",
+    "version": "0.0.4",
+    "publisher": "Marco012",
+    "icon": "icon.png",
     "engines": {
         "vscode": "^1.59.0"
     },
@@ -28,13 +30,6 @@
                 "language": "microvasm",
                 "scopeName": "main.vasm",
                 "path": "./syntaxes/microvasm.tmLanguage.json"
-            }
-        ],
-        "iconThemes": [
-            {
-                "id": "MicroVASM Icon",
-                "label": "MicroVASM",
-                "path": "./iconDefinitions.json"
             }
         ]
     },
