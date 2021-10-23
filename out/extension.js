@@ -114,6 +114,8 @@ function checkErrors() {
     const document = vscode.window.activeTextEditor.document;
     const text = document.getText();
     const lines = text === null || text === void 0 ? void 0 : text.split(new RegExp('\\r?\\n|\\r'));
+    if (!document.fileName.endsWith(".vasm"))
+        return;
     var lineIndex = -1;
     diagnosticCollection.clear();
     externalFunctions.clear();
@@ -339,6 +341,8 @@ function activate(context) {
     checkErrors();
     vscode.languages.registerHoverProvider('microvasm', {
         provideHover(document, position, token) {
+            if (!document.fileName.endsWith(".vasm"))
+                return;
             const line = document.lineAt(position.line).text;
             if (line.charAt(position.character) == ' ')
                 return null;
@@ -397,6 +401,8 @@ function activate(context) {
     });
     vscode.languages.registerDefinitionProvider('microvasm', {
         provideDefinition(document, position, token) {
+            if (!document.fileName.endsWith(".vasm"))
+                return;
             var argStart = -1;
             var argEnd = -1;
             var args = [];
@@ -462,6 +468,8 @@ function activate(context) {
     });
     vscode.languages.registerCompletionItemProvider('microvasm', {
         provideCompletionItems(document, position, token, context) {
+            if (!document.fileName.endsWith(".vasm"))
+                return;
             const line = document.lineAt(position.line).text;
             var argIndex = 0;
             var instructionStart = -1;

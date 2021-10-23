@@ -2,7 +2,7 @@
     "name": "microvasm",
     "displayName": "MicroVASM",
     "description": "Syntax Highlighting for the MicroVASM language.",
-    "version": "0.0.4",
+    "version": "0.0.6",
     "publisher": "Marco012",
     "icon": "icon.png",
     "engines": {
