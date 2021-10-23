@@ -166,6 +166,10 @@ function checkErrors() {
                     externalFunctions.set(args[1].value, { position: new vscode.Position(lineIndex, args[0].start) });
                 }
                 else if (instruction.name == 'SCOPE') {
+                    if (scopeLines.length > 1) {
+                        setError(document, "Error. Cannot create a scope inside a scope.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[args.length - 1].end));
+                        return;
+                    }
                     var data = [];
                     if (references.has(args[1].value))
                         data = references.get(args[1].value);
@@ -243,6 +247,9 @@ function checkErrors() {
                     referencesBeingCalled.push({ name: args[2].value, line: lineIndex, start: args[2].start, end: args[2].end, scopes: [...scopeLines] });
                 }
                 else if (instruction.name == 'END') {
+                    if (scopeLines.length <= 1) {
+                        setError(document, "Error. There is no scope to end.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[0].end));
+                    }
                     scopeLines.pop();
                     currentScope = scopeLines[scopeLines.length - 1];
                 }
