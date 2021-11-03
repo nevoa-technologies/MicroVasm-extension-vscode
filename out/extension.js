@@ -81,6 +81,7 @@ const instructions = [
     new Instruction('REFERENCE', 'Creates a reference that can be used by JMPs and CALLs.', [InstructionParameter.String]),
     new Instruction('CMP', 'Compares 2 registers.', [InstructionParameter.Comparsion, InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
     new Instruction('JMP', 'Jumps to a location if the value of the given register is not 0.', [InstructionParameter.Register, InstructionParameter.Reference]),
+    new Instruction('JMP', 'Jumps to a location.', [InstructionParameter.Reference]),
     new Instruction('CALL', 'Jumps to a location. Creating and ending a scope will make it return to where it was called.', [InstructionParameter.Reference]),
     new Instruction('AND', 'Logical And. Performs a bitwise AND on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
     new Instruction('ORR', 'Logical Or. Performs a bitwise OR on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
@@ -93,7 +94,11 @@ var instructionsMap = new Map();
 var completionInstructions = [];
 instructions.forEach(i => {
     completionInstructions.push({ label: i.name, kind: vscode.CompletionItemKind.Function, detail: i.description });
-    instructionsMap.set(i.name, i);
+    var instArray = instructionsMap.get(i.name);
+    if (instArray == null)
+        instArray = [];
+    instArray.push(i);
+    instructionsMap.set(i.name, instArray);
 });
 var keywords = new Map();
 completionRegisters.forEach(c => {
@@ -155,158 +160,170 @@ function checkErrors() {
                 args.push({ value: lastArg, start: argStart, end: i });
         }
         if (args.length > 0) {
-            const instruction = instructionsMap.get(args[0].value);
-            if (instruction == null) {
+            const instructionArray = instructionsMap.get(args[0].value);
+            if (instructionArray == null) {
                 setError(document, "Error. Invalid instruction.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[args.length - 1].end));
             }
             else {
-                if (instruction.parameters.length > args.length - 1) {
-                    setError(document, "Error. Missing parameters.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[args.length - 1].end));
-                    return;
-                }
-                if (instruction.name == 'FUNCTION') {
-                    externalFunctions.set(args[1].value, { position: new vscode.Position(lineIndex, args[0].start) });
-                }
-                else if (instruction.name == 'SCOPE') {
-                    if (scopeLines.length > 1) {
-                        setError(document, "Error. Cannot create a scope inside a scope.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[args.length - 1].end));
-                        return;
+                var invalidParams = false;
+                for (var x = 0; x < instructionArray.length; x++) {
+                    const instruction = instructionArray[x];
+                    if (instruction.parameters.length != args.length - 1) {
+                        if (x == instructionArray.length - 1)
+                            invalidParams = true;
+                        continue;
                     }
-                    var data = [];
-                    if (references.has(args[1].value))
-                        data = references.get(args[1].value);
-                    var reference = references.get(args[1].value);
-                    var found = false;
-                    if (reference != null) {
-                        reference.forEach(v => {
-                            if (scopeLines.includes((v.scope))) {
-                                found = true;
-                                return;
-                            }
-                        });
+                    if (instruction.name == 'FUNCTION') {
+                        externalFunctions.set(args[1].value, { position: new vscode.Position(lineIndex, args[0].start) });
                     }
-                    if (found)
-                        setError(document, "Error. Reference already exists.", new vscode.Position(lineIndex, args[1].start), new vscode.Position(lineIndex, args[1].end));
-                    else {
-                        data.push({ position: new vscode.Position(lineIndex, args[0].start), scope: currentScope, kind: vscode.CompletionItemKind.Function });
-                        references.set(args[1].value, data);
-                    }
-                    currentScope = lineIndex;
-                    scopeLines.push(currentScope);
-                }
-                else if (instruction.name == 'REFERENCE') {
-                    var data = [];
-                    if (references.has(args[1].value))
-                        data = references.get(args[1].value);
-                    var reference = references.get(args[1].value);
-                    var found = false;
-                    if (reference != null) {
-                        reference.forEach(v => {
-                            if (scopeLines.includes((v.scope))) {
-                                found = true;
-                                return;
-                            }
-                        });
-                    }
-                    if (found)
-                        setError(document, "Error. Reference already exists.", new vscode.Position(lineIndex, args[1].start), new vscode.Position(lineIndex, args[1].end));
-                    else {
-                        data.push({ position: new vscode.Position(lineIndex, args[0].start), scope: currentScope, kind: vscode.CompletionItemKind.Reference });
-                        references.set(args[1].value, data);
-                    }
-                }
-                else if (instruction.name == 'INVOKE') {
-                    if (!externalFunctions.has(args[1].value)) {
-                        setError(document, "Error. Undefined function.", new vscode.Position(lineIndex, args[1].start), new vscode.Position(lineIndex, args[1].end));
-                    }
-                }
-                else if (instruction.name == 'DEF') {
-                    var data = [];
-                    if (varDefinitions.has(args[2].value))
-                        data = varDefinitions.get(args[2].value);
-                    var varDefinition = varDefinitions.get(args[2].value);
-                    var found = false;
-                    if (varDefinition != null) {
-                        varDefinition.forEach(v => {
-                            if (scopeLines.includes((v.scope))) {
-                                found = true;
-                                return;
-                            }
-                        });
-                    }
-                    if (found) {
-                        setError(document, "Error. There is already a definition called '" + args[2].value + "' in this scope.", new vscode.Position(lineIndex, args[2].start), new vscode.Position(lineIndex, args[2].end));
-                    }
-                    else {
-                        data.push({ position: new vscode.Position(lineIndex, args[0].start), scope: currentScope });
-                        varDefinitions.set(args[2].value, data);
-                    }
-                }
-                else if (instruction.name == 'CALL') {
-                    referencesBeingCalled.push({ name: args[1].value, line: lineIndex, start: args[1].start, end: args[1].end, scopes: [...scopeLines] });
-                }
-                else if (instruction.name == 'JMP') {
-                    referencesBeingCalled.push({ name: args[2].value, line: lineIndex, start: args[2].start, end: args[2].end, scopes: [...scopeLines] });
-                }
-                else if (instruction.name == 'END') {
-                    if (scopeLines.length <= 1) {
-                        setError(document, "Error. There is no scope to end.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[0].end));
-                    }
-                    scopeLines.pop();
-                    currentScope = scopeLines[scopeLines.length - 1];
-                }
-                for (var i = 1; i < args.length; i++) {
-                    if (i - 1 < instruction.parameters.length) {
-                        switch (instruction.parameters[i - 1]) {
-                            case InstructionParameter.Register:
-                                if (!registersSet.has(args[i].value))
-                                    setError(document, "Error. Invalid parameter. It should be a register.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
-                                break;
-                            case InstructionParameter.Type:
-                                var value = args[i].value;
-                                if (Number.isNaN(parseInt(value, 10)) && Number.isNaN(parseInt(value, 2)) && Number.isNaN(parseInt(value, 8)) && Number.isNaN(parseInt(value, 16)))
-                                    if (!typesSet.has(args[i].value))
-                                        setError(document, "Error. Invalid parameter. It should be a type.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
-                                break;
-                            case InstructionParameter.Comparsion:
-                                if (!comparsionsSet.has(args[i].value))
-                                    setError(document, "Error. Invalid parameter. It should be a comparsion.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
-                                break;
-                            case InstructionParameter.Number:
-                                var value = args[i].value;
-                                var varDefinition = varDefinitions.get(value);
-                                var found = false;
-                                if (varDefinition != null) {
-                                    varDefinition.forEach(v => {
-                                        if (scopeLines.includes((v.scope))) {
-                                            found = true;
-                                            return;
-                                        }
-                                    });
+                    else if (instruction.name == 'SCOPE') {
+                        if (scopeLines.length > 1) {
+                            setError(document, "Error. Cannot create a scope inside a scope.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[args.length - 1].end));
+                            return;
+                        }
+                        var data = [];
+                        if (references.has(args[1].value))
+                            data = references.get(args[1].value);
+                        var reference = references.get(args[1].value);
+                        var found = false;
+                        if (reference != null) {
+                            reference.forEach(v => {
+                                if (scopeLines.includes((v.scope))) {
+                                    found = true;
+                                    return;
                                 }
-                                if (found)
-                                    break;
-                                if (Number.isNaN(parseInt(value, 10)) && Number.isNaN(parseInt(value, 2)) && Number.isNaN(parseInt(value, 8)) && Number.isNaN(parseInt(value, 16)))
-                                    setError(document, "Error. Invalid parameter. It should be a number.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
-                                break;
-                            case InstructionParameter.Value:
-                                var value = args[i].value;
-                                if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\'')))
-                                    break;
-                                if (Number.isNaN(parseInt(value, 10)) && Number.isNaN(parseInt(value, 2)) && Number.isNaN(parseInt(value, 8)) && Number.isNaN(parseInt(value, 16)))
-                                    setError(document, "Error. Invalid parameter. It should be a number or a string.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
-                                break;
-                            case InstructionParameter.String:
-                                var format = /[ `!@#$%^&*()+\-=\[\]{};':"\\|,.<>\/?~]/;
-                                if (format.test(args[i].value))
-                                    setError(document, "Error. Invalid string. It should not contain special characters.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
-                                break;
+                            });
+                        }
+                        if (found)
+                            setError(document, "Error. Reference already exists.", new vscode.Position(lineIndex, args[1].start), new vscode.Position(lineIndex, args[1].end));
+                        else {
+                            data.push({ position: new vscode.Position(lineIndex, args[0].start), scope: currentScope, kind: vscode.CompletionItemKind.Function });
+                            references.set(args[1].value, data);
+                        }
+                        currentScope = lineIndex;
+                        scopeLines.push(currentScope);
+                    }
+                    else if (instruction.name == 'REFERENCE') {
+                        var data = [];
+                        if (references.has(args[1].value))
+                            data = references.get(args[1].value);
+                        var reference = references.get(args[1].value);
+                        var found = false;
+                        if (reference != null) {
+                            reference.forEach(v => {
+                                if (scopeLines.includes((v.scope))) {
+                                    found = true;
+                                    return;
+                                }
+                            });
+                        }
+                        if (found)
+                            setError(document, "Error. Reference already exists.", new vscode.Position(lineIndex, args[1].start), new vscode.Position(lineIndex, args[1].end));
+                        else {
+                            data.push({ position: new vscode.Position(lineIndex, args[0].start), scope: currentScope, kind: vscode.CompletionItemKind.Reference });
+                            references.set(args[1].value, data);
                         }
                     }
-                    else {
-                        setError(document, "Error. This instruction has more parameters than it should.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                    else if (instruction.name == 'INVOKE') {
+                        if (!externalFunctions.has(args[1].value)) {
+                            setError(document, "Error. Undefined function.", new vscode.Position(lineIndex, args[1].start), new vscode.Position(lineIndex, args[1].end));
+                        }
                     }
+                    else if (instruction.name == 'DEF') {
+                        var data = [];
+                        if (varDefinitions.has(args[2].value))
+                            data = varDefinitions.get(args[2].value);
+                        var varDefinition = varDefinitions.get(args[2].value);
+                        var found = false;
+                        if (varDefinition != null) {
+                            varDefinition.forEach(v => {
+                                if (scopeLines.includes((v.scope))) {
+                                    found = true;
+                                    return;
+                                }
+                            });
+                        }
+                        if (found) {
+                            setError(document, "Error. There is already a definition called '" + args[2].value + "' in this scope.", new vscode.Position(lineIndex, args[2].start), new vscode.Position(lineIndex, args[2].end));
+                        }
+                        else {
+                            data.push({ position: new vscode.Position(lineIndex, args[0].start), scope: currentScope });
+                            varDefinitions.set(args[2].value, data);
+                        }
+                    }
+                    else if (instruction.name == 'CALL') {
+                        referencesBeingCalled.push({ name: args[1].value, line: lineIndex, start: args[1].start, end: args[1].end, scopes: [...scopeLines] });
+                    }
+                    else if (instruction.name == 'JMP') {
+                        if (args.length >= 3)
+                            referencesBeingCalled.push({ name: args[2].value, line: lineIndex, start: args[2].start, end: args[2].end, scopes: [...scopeLines] });
+                        else
+                            referencesBeingCalled.push({ name: args[1].value, line: lineIndex, start: args[1].start, end: args[1].end, scopes: [...scopeLines] });
+                    }
+                    else if (instruction.name == 'END') {
+                        if (scopeLines.length <= 1) {
+                            setError(document, "Error. There is no scope to end.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[0].end));
+                        }
+                        scopeLines.pop();
+                        currentScope = scopeLines[scopeLines.length - 1];
+                    }
+                    var i = 0;
+                    for (var index = 1; index < args.length; index++) {
+                        if (i - 1 < instruction.parameters.length) {
+                            switch (instruction.parameters[i - 1]) {
+                                case InstructionParameter.Register:
+                                    if (!registersSet.has(args[i].value))
+                                        setError(document, "Error. Invalid parameter. It should be a register.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                                    break;
+                                case InstructionParameter.Type:
+                                    var value = args[i].value;
+                                    if (Number.isNaN(parseInt(value, 10)) && Number.isNaN(parseInt(value, 2)) && Number.isNaN(parseInt(value, 8)) && Number.isNaN(parseInt(value, 16)))
+                                        if (!typesSet.has(args[i].value))
+                                            setError(document, "Error. Invalid parameter. It should be a type.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                                    break;
+                                case InstructionParameter.Comparsion:
+                                    if (!comparsionsSet.has(args[i].value))
+                                        setError(document, "Error. Invalid parameter. It should be a comparsion.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                                    break;
+                                case InstructionParameter.Number:
+                                    var value = args[i].value;
+                                    var varDefinition = varDefinitions.get(value);
+                                    var found = false;
+                                    if (varDefinition != null) {
+                                        varDefinition.forEach(v => {
+                                            if (scopeLines.includes((v.scope))) {
+                                                found = true;
+                                                return;
+                                            }
+                                        });
+                                    }
+                                    if (found)
+                                        break;
+                                    if (Number.isNaN(parseInt(value, 10)) && Number.isNaN(parseInt(value, 2)) && Number.isNaN(parseInt(value, 8)) && Number.isNaN(parseInt(value, 16)))
+                                        setError(document, "Error. Invalid parameter. It should be a number.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                                    break;
+                                case InstructionParameter.Value:
+                                    var value = args[i].value;
+                                    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\'')))
+                                        break;
+                                    if (Number.isNaN(parseInt(value, 10)) && Number.isNaN(parseInt(value, 2)) && Number.isNaN(parseInt(value, 8)) && Number.isNaN(parseInt(value, 16)))
+                                        setError(document, "Error. Invalid parameter. It should be a number or a string.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                                    break;
+                                case InstructionParameter.String:
+                                    var format = /[ `!@#$%^&*()+\-=\[\]{};':"\\|,.<>\/?~]/;
+                                    if (format.test(args[i].value))
+                                        setError(document, "Error. Invalid string. It should not contain special characters.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                                    break;
+                            }
+                        }
+                        else {
+                            setError(document, "Error. This instruction has more parameters than it should.", new vscode.Position(lineIndex, args[i].start), new vscode.Position(lineIndex, args[i].end));
+                        }
+                    }
+                    break;
                 }
+                if (invalidParams)
+                    setError(document, "Error. Missing parameters.", new vscode.Position(lineIndex, args[0].start), new vscode.Position(lineIndex, args[args.length - 1].end));
             }
         }
     });
@@ -360,7 +377,7 @@ function activate(context) {
             var name = word;
             var result = new vscode.MarkdownString();
             if (instructionsMap.has(name)) {
-                var instruction = instructionsMap.get(name);
+                var instruction = instructionsMap.get(name)[0];
                 if (instruction.parameters.length > 0)
                     name += ": ";
                 instruction === null || instruction === void 0 ? void 0 : instruction.parameters.forEach(p => {
@@ -454,6 +471,12 @@ function activate(context) {
                             return;
                         return new vscode.Location(document.uri, ref.position);
                     }
+                    else if (args.length >= 2) {
+                        var ref = getReference(getAvailableScopes(document, position.line), args[1].value);
+                        if (ref == null)
+                            return;
+                        return new vscode.Location(document.uri, ref.position);
+                    }
                 }
             }
             var def = getDefinition(getAvailableScopes(document, position.line), args[argHover].value);
@@ -496,7 +519,7 @@ function activate(context) {
                 return new vscode.CompletionList(completionInstructions);
             else {
                 if (instructionsMap.has(instruction)) {
-                    var inst = instructionsMap.get(instruction);
+                    var inst = instructionsMap.get(instruction)[0];
                     if (argIndex - 1 < inst.parameters.length) {
                         switch (inst.parameters[argIndex - 1]) {
                             case InstructionParameter.Register:
