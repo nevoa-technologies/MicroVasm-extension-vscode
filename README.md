@@ -1,6 +1,6 @@
 # MicroVASM VSCode Extension
 A Visual Studio Code extension for MicroVASM assembly programming.
-https://github.com/nevoa-dev/micro-vasm
+https://github.com/nevoa-technologies/micro-vasm
 
 Features:
  - Syntax Highlighting
