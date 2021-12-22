@@ -8,14 +8,14 @@ SCOPE forLoop
     LDI     R1 INT32 10
     REFERENCE   for_start
     CMP     GREATER_OR_EQUAL R2 R0 R1
-    JMP     R2  for_end
+    JNZ     R2  for_end
     ; Body
     LDI     R3 INT8 1
     ADD     R0 R0 R3
     LDI     R2 INT8 1
 	STS     R0 index INT32
 	INVOKE  print
-    JMP     R2 for_start
+    JNZ     R2 for_start
     REFERENCE for_end
 END
 

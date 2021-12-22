@@ -31,7 +31,7 @@ const completionRegisters: vscode.CompletionItem[] = [
     { label: 'R2', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
     { label: 'R3', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
     { label: 'R4', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
-    { label: 'RR', kind: vscode.CompletionItemKind.Property, detail: 'Register to receive the returned value of external functions.' },
+    { label: 'SP', kind: vscode.CompletionItemKind.Property, detail: 'Register to receive the returned value of external functions.' },
 ];
 
 const completionTypes: vscode.CompletionItem[] = [
@@ -92,8 +92,8 @@ const instructions: Instruction[] = [
     new Instruction('END', 'Ends the previous scope.', []),
     new Instruction('REFERENCE', 'Creates a reference that can be used by JMPs and CALLs.', [InstructionParameter.String]),
     new Instruction('CMP', 'Compares 2 registers.', [InstructionParameter.Comparsion, InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
-    new Instruction('JMP', 'Jumps to a location if the value of the given register is not 0.', [InstructionParameter.Register, InstructionParameter.Reference]),
     new Instruction('JMP', 'Jumps to a location.', [InstructionParameter.Reference]),
+    new Instruction('JNZ', 'Jumps to a location if the value of the given register is not 0.', [InstructionParameter.Register, InstructionParameter.Reference]),
     new Instruction('CALL', 'Jumps to a location. Creating and ending a scope will make it return to where it was called.', [InstructionParameter.Reference]),
     new Instruction('AND', 'Logical And. Performs a bitwise AND on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
     new Instruction('ORR', 'Logical Or. Performs a bitwise OR on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
@@ -310,11 +310,13 @@ function checkErrors() {
                     }
                     else if (instruction.name == 'CALL') {
                         referencesBeingCalled.push({ name: args[1].value, line: lineIndex, start: args[1].start, end: args[1].end, scopes: [...scopeLines] });
-                    } else if (instruction.name == 'JMP') {
+                    }
+                    else if (instruction.name == 'JMP') {
+                        referencesBeingCalled.push({ name: args[1].value, line: lineIndex, start: args[1].start, end: args[1].end, scopes: [...scopeLines] });
+                    }
+                    else if (instruction.name == 'JNZ') {
                         if (args.length >= 3)
                             referencesBeingCalled.push({ name: args[2].value, line: lineIndex, start: args[2].start, end: args[2].end, scopes: [...scopeLines] });
-                        else
-                            referencesBeingCalled.push({ name: args[1].value, line: lineIndex, start: args[1].start, end: args[1].end, scopes: [...scopeLines] });
                     }
                     else if (instruction.name == 'END') {
                         if (scopeLines.length <= 1)
@@ -576,16 +578,15 @@ export function activate(context: vscode.ExtensionContext) {
                     if (externalFunctions.has(args[1].value))
                         return new vscode.Location(document.uri, externalFunctions.get(args[1].value).position);
                 } else if (args[0].value == 'JMP') {
+                    var ref = getReference(getAvailableScopes(document, position.line), args[1].value);
+                   
+                    if (ref == null)
+                    return;
+
+                    return new vscode.Location(document.uri, ref.position);
+                } else if (args[0].value == 'JNZ') {
                     if (args.length >= 3 && references.has(args[2].value)) {
                         var ref = getReference(getAvailableScopes(document, position.line), args[2].value);
-                       
-                        if (ref == null)
-                        return;
-
-                        return new vscode.Location(document.uri, ref.position);
-                    }
-                    else if (args.length >= 2) {
-                        var ref = getReference(getAvailableScopes(document, position.line), args[1].value);
                        
                         if (ref == null)
                         return;
