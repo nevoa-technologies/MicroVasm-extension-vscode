@@ -26,7 +26,8 @@ const completionRegisters = [
     { label: 'R2', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
     { label: 'R3', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
     { label: 'R4', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
-    { label: 'SP', kind: vscode.CompletionItemKind.Property, detail: 'Register to receive the returned value of external functions.' },
+    { label: 'SP', kind: vscode.CompletionItemKind.Property, detail: 'Stack pointer register.' },
+    { label: 'MP', kind: vscode.CompletionItemKind.Property, detail: 'Memory pointer register.' },
 ];
 const completionTypes = [
     { label: 'INT8', kind: vscode.CompletionItemKind.Enum, detail: 'Integer signed number of 1 byte.' },
@@ -377,7 +378,6 @@ function setError(document, msg, start, end) {
 }
 function activate(context) {
     diagnosticCollection = vscode.languages.createDiagnosticCollection('microvasm');
-    checkErrors();
     vscode.languages.registerHoverProvider('microvasm', {
         provideHover(document, position, token) {
             if (!document.fileName.endsWith(".vasm"))
@@ -508,9 +508,6 @@ function activate(context) {
             ;
         }
     });
-    vscode.workspace.onDidChangeTextDocument(function (e) {
-        checkErrors();
-    });
     vscode.languages.registerCompletionItemProvider('microvasm', {
         provideCompletionItems(document, position, token, context) {
             if (!document.fileName.endsWith(".vasm"))
@@ -565,6 +562,13 @@ function activate(context) {
             return null;
         }
     });
+    vscode.workspace.onDidChangeTextDocument(function (e) {
+        checkErrors();
+    });
+    vscode.workspace.onDidOpenTextDocument(function (e) {
+        checkErrors();
+    });
+    checkErrors();
 }
 exports.activate = activate;
 function getAvailableScopes(document, line) {

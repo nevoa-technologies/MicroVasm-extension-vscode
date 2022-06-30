@@ -2,9 +2,10 @@
     "name": "microvasm",
     "displayName": "MicroVASM",
     "description": "Syntax Highlighting for the MicroVASM language.",
-    "version": "0.0.6",
+    "version": "0.1.1",
     "publisher": "Marco012",
     "icon": "icon.png",
+    "repository": "https://github.com/nevoa-technologies/MicroVasm-extension-vscode",
     "engines": {
         "vscode": "^1.59.0"
     },

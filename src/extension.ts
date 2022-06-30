@@ -464,8 +464,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     diagnosticCollection = vscode.languages.createDiagnosticCollection('microvasm');
 
-    checkErrors();
-
     vscode.languages.registerHoverProvider('microvasm', {
         provideHover(document, position, token) {
             if (!document.fileName.endsWith(".vasm"))
@@ -628,10 +626,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
     })
 
-    vscode.workspace.onDidChangeTextDocument(function (e) {
-        checkErrors();
-    });
-
     vscode.languages.registerCompletionItemProvider('microvasm', {
         provideCompletionItems(document, position, token, context) {
 
@@ -696,6 +690,17 @@ export function activate(context: vscode.ExtensionContext) {
             return null;
         }
     });
+
+    vscode.workspace.onDidChangeTextDocument(function (e) {
+        checkErrors();
+    });
+
+    vscode.workspace.onDidOpenTextDocument(function (e) {
+        checkErrors();
+    });
+
+    checkErrors();
+
 }
 
 
