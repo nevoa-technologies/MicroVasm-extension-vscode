@@ -31,7 +31,8 @@ const completionRegisters: vscode.CompletionItem[] = [
     { label: 'R2', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
     { label: 'R3', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
     { label: 'R4', kind: vscode.CompletionItemKind.Property, detail: 'General purpose register.' },
-    { label: 'SP', kind: vscode.CompletionItemKind.Property, detail: 'Register to receive the returned value of external functions.' },
+    { label: 'SP', kind: vscode.CompletionItemKind.Property, detail: 'Stack pointer register.' },
+    { label: 'MP', kind: vscode.CompletionItemKind.Property, detail: 'Memory pointer register.' },
 ];
 
 const completionTypes: vscode.CompletionItem[] = [
@@ -43,8 +44,6 @@ const completionTypes: vscode.CompletionItem[] = [
     { label: 'UINT16', kind: vscode.CompletionItemKind.Enum, detail: 'Integer unsigned number of 2 bytes.' },
     { label: 'UINT32', kind: vscode.CompletionItemKind.Enum, detail: 'Integer unsigned number of 4 bytes.' },
     { label: 'UINT64', kind: vscode.CompletionItemKind.Enum, detail: 'Integer unsigned number of 8 bytes.' },
-    { label: 'FLOAT32', kind: vscode.CompletionItemKind.Enum, detail: 'Floating point number of 4 bytes.' },
-    { label: 'FLOAT64', kind: vscode.CompletionItemKind.Enum, detail: 'Double precision floating point number of 8 bytes.' },
 ];
 
 const completionComparsions: vscode.CompletionItem[] = [
@@ -100,7 +99,11 @@ const instructions: Instruction[] = [
     new Instruction('NOT', 'Logical Not. Performs a bitwise NOT on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register]),
     new Instruction('LSL', 'Logical Shift Left. Performs a bitwise shift left on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
     new Instruction('LSR', 'Logical Shift Right. Performs a bitwise shift right on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
-    new Instruction('XOR', 'Logical Exclusive Or. Performs a bitwise XOR on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register])
+    new Instruction('XOR', 'Logical Exclusive Or. Performs a bitwise XOR on 2 registers.', [InstructionParameter.Register, InstructionParameter.Register, InstructionParameter.Register]),
+    new Instruction('PUSH', 'Push a value from a register into the stack.', [InstructionParameter.Register, InstructionParameter.Number]),
+    new Instruction('POP', 'Pop a value from the stack into a register.', [InstructionParameter.Register, InstructionParameter.Number]),
+    new Instruction('LADR', 'Pop a value from the stack into a register.', [InstructionParameter.Register, InstructionParameter.Reference])
+
 ];
 
 var instructionsMap = new Map<string, Instruction[]>();
@@ -187,6 +190,26 @@ function checkErrors() {
                     }
 
                     i--;
+                }
+            }
+            else if (line.charAt(i) == '"' && argStart == -1) {
+                argStart = i;
+                argEnd = -1;
+                i++;
+                while (line.charAt(i) != '"' && i < line.length) {      
+                    if (line.charAt(i) == '\\')
+                        i++;
+                    i++;
+                }
+            }
+            else if (line.charAt(i) == '\'' && argStart == -1) {
+                argStart = i;
+                argEnd = -1;
+                i++;
+                while (line.charAt(i) != '\'' && i < line.length) {            
+                    if (line.charAt(i) == '\\')
+                        i++;
+                    i++;
                 }
             }
             else if (argStart == -1) {

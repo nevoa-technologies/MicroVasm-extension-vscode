@@ -16,7 +16,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.microvasm",
-				"match": "\\b(DEF|EOP|LDR|STR|LDS|STS|LDI|MOV|NEG|INVOKE|ADD|SUB|MUL|DIV|CMP|JMP|JNZ|CALL|AND|ORR|NOT|LSL|LSR|XOR)\\b"
+				"match": "\\b(DEF|EOP|LDR|STR|LDS|STS|LDI|MOV|NEG|INVOKE|ADD|SUB|MUL|DIV|CMP|JMP|JNZ|CALL|AND|ORR|NOT|LSL|LSR|XOR|PUSH|POP|JNZ|LADR)\\b"
 			},{
 
 				"name": "entity.name.tag.microvasm",
@@ -36,7 +36,7 @@
 			},
 			{
 				"name": "variable.microvasm",
-				"match": "\\b(INT8|INT16|INT32|INT64|FLOAT32|FLOAT64|UINT8|UINT16|UINT32|UINT64)\\b"
+				"match": "\\b(INT8|INT16|INT32|INT64|UINT8|UINT16|UINT32|UINT64)\\b"
 			},
 			{
 				"name": "strong.microvasm",
